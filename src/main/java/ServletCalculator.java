@@ -4,8 +4,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class ServletCalculator extends HttpServlet {
+    public static final String CALC_COOKIE_NAME = "calc_id";
     private CalculatorManager manager;
 
     public ServletCalculator(CalculatorManager manager) {
@@ -16,13 +18,13 @@ public class ServletCalculator extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         Calculator calc;
         Cookie[] cookies = req.getCookies();
-        if (cookies == null) {
+        if (cookies == null || !hasCalcCookie(cookies)) {
             // create calculator
             calc = manager.getOrCreate();
             // create cookie
-            resp.addCookie(new Cookie("id", String.valueOf(calc.getId())));
+            resp.addCookie(new Cookie(CALC_COOKIE_NAME, String.valueOf(calc.getId())));
         } else {
-            Cookie c = cookies[0];
+            Cookie c = Stream.of(cookies).filter(cookie -> cookie.getName().equals(CALC_COOKIE_NAME)).findAny().get();
             // parse cookie
             int id = Integer.parseInt(c.getValue());
             // get the calculator
@@ -42,5 +44,9 @@ public class ServletCalculator extends HttpServlet {
             }
         }
         resp.getWriter().write(content.toString());
+    }
+
+    private boolean hasCalcCookie(Cookie[] cookies) {
+        return Stream.of(cookies).parallel().anyMatch(cookie -> cookie.getName().equals(CALC_COOKIE_NAME));
     }
 }
